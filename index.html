@@ -21825,7 +21825,95 @@ function egDeckDownload(d) {
     '@keyframes f{from{opacity:0;transform:scale(.98)}to{opacity:1}}.im{background:#170e28 center/cover}.tx{padding:7vh 5vw;display:flex;flex-direction:column;justify-content:center}h2{font-size:3vw;margin:0 0 3vh}p{font-size:1.5vw;line-height:1.5;margin:0 0 1.4vh;padding-left:1.2em;position:relative}' +
     'p:before{content:"";position:absolute;left:0;top:.6em;width:.45em;height:.45em;border-radius:50%;background:#c77dff}aside{display:none}</style></head><body>' + slides +
     '<script>var i=0,s=document.querySelectorAll("section");function g(k){s[i].classList.remove("on");i=(k+s.length)%s.length;s[i].classList.add("on")}' +
-    'addEventListener("keydown",function(e){if(e.key=="ArrowRight"||e.key==" ")g(i+1);if(e.key=="ArrowLeft")g(i-1)});addEventListener("click",function(){g(i+1)})<\/script></body></html>';
+    'addEventListener("keydown",function(e){if(e.key=="ArrowRight"||e.key==" ")g(i+1);if(e.key=="ArrowLeft")g(i-1)});addEventListener("click",function(){g(i+1)})<\/script>
+<!-- EG_CLOUDFLARE_CODE_LOGIN_V1 -->
+<script>
+(function () {
+  'use strict';
+  var API = 'https://eesagames-api.9cwvcb677d.workers.dev';
+  var busy = false;
+
+  function showError(message) {
+    try { V2.gateErr(message); }
+    catch (e) {
+      var el = document.getElementById('gate-err');
+      if (el) el.textContent = message;
+    }
+  }
+
+  function rankFor(account, username) {
+    var role = String(account.role || account.access_role || '').toUpperCase();
+    var power = Number(account.power_rank || account.rank || 0);
+    var name = String(username || '').toLowerCase();
+    if (role.indexOf('ABSOLUTE_OWNER') >= 0 || power >= 100) return 'aizan';
+    if (role.indexOf('BACKUP_EHP') >= 0 || power >= 90) return 'backup';
+    if (role === 'EHP' || power >= 80) return name === 'nununanight4lifee' ? 'eesa' : 'felix';
+    if (role.indexOf('BACKUP_HIGH_POWER') >= 0 || power >= 50) return 'elijah';
+    return 'hi';
+  }
+
+  async function submitCloudflareCode() {
+    if (busy) return;
+    var input = document.getElementById('gate-pass');
+    var code = input ? input.value.trim() : '';
+    if (!code) { showError('Enter your access code.'); return; }
+
+    busy = true;
+    var button = document.querySelector('#gate-0 button.v2-btn');
+    if (button) { button.disabled = true; button.textContent = 'checking…'; }
+    showError('Checking access code…');
+
+    try {
+      var response = await fetch(API + '/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code }),
+        cache: 'no-store'
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok) throw new Error(data.error || data.message || 'Access code not recognised.');
+
+      var account = data.account || data.user || {};
+      var username = account.username || account.user || account.name;
+      var token = data.token || data.session_token;
+      if (!username || !token) throw new Error('The server returned an incomplete login response.');
+
+      var rank = rankFor(account, username);
+      var user = V2.db.users[username] || mkUser(username, rank, {
+        disp: account.display_name || account.displayName || username
+      });
+      user.u = username;
+      user.rank = rank;
+      user.dn = account.display_name || account.displayName || user.dn || username;
+      V2.db.users[username] = user;
+      V2.save();
+
+      try { sessionStorage.setItem('eg_api_token', token); } catch (e) {}
+      if (typeof signIn === 'function') {
+        if (!signIn(user)) throw new Error('This account could not be opened on this device.');
+      } else {
+        V2.startSession(user, 'user');
+        V2.enterSite();
+        setTimeout(function () { try { V39.afterLogin(); } catch (e) {} }, 60);
+      }
+      if (input) input.value = '';
+    } catch (error) {
+      showError(error && error.message ? error.message : 'Could not connect to the login server. Try again.');
+    } finally {
+      busy = false;
+      if (button) { button.disabled = false; button.textContent = 'continue →'; }
+    }
+  }
+
+  window.submitPass = submitCloudflareCode;
+  var button = document.querySelector('#gate-0 button.v2-btn');
+  if (button) button.setAttribute('onclick', 'submitPass()');
+  var input = document.getElementById('gate-pass');
+  if (input) input.setAttribute('onkeydown', "if(event.key==='Enter'){event.preventDefault();submitPass();}");
+})();
+</script>
+
+</body></html>';
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
   a.download = String(deck.title || 'slides').replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '.html';
